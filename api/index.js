@@ -240,9 +240,16 @@ app.get('/api/download/:token', (req, res) => {
 app.post('/api/track', (req, res) => {
   notify.visit({
     page: req.body?.page || '/',
-    ip: clientIp(req),
+    ip: req.headers['x-real-ip'] || clientIp(req),
     ua: req.headers['user-agent'] || '',
     referrer: req.headers['referer'] || req.body?.referrer || '',
+    geoHint: {
+      country: req.headers['x-vercel-ip-country'],
+      countryCode: req.headers['x-vercel-ip-country'],
+      region: req.headers['x-vercel-ip-country-region'],
+      city: req.headers['x-vercel-ip-city']
+        ? decodeURIComponent(req.headers['x-vercel-ip-city']) : '',
+    },
   }).catch(() => {});
   res.json({ ok: true });
 });

@@ -35,8 +35,15 @@ function isPrivateIp(ip) {
     /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip);
 }
 
-async function geoLookup(ip) {
-  const fallback = { country: 'Desconocido', countryCode: '', region: '', city: '', isp: '' };
+async function geoLookup(ip, hint = {}) {
+  const fallback = { country: 'Desconocido', countryCode: '', region: '', city: '', isp: '', src: '' };
+  if (hint.country) {
+    return {
+      country: hint.country, countryCode: hint.countryCode || '',
+      region: hint.region || '', city: hint.city || '', isp: '',
+      src: 'vercel-edge',
+    };
+  }
   if (isPrivateIp(ip)) return { ...fallback, country: 'Local/Privada' };
 
   const cached = geoCache.get(ip);
@@ -52,6 +59,7 @@ async function geoLookup(ip) {
       region: data.region || '',
       city: data.city || '',
       isp: data.org || '',
+      src: 'ipapi',
     };
     geoCache.set(ip, { data: info, ts: Date.now() });
     return info;
@@ -64,8 +72,8 @@ async function geoLookup(ip) {
 
 function parseUA(ua = '') {
   let device = 'Escritorio';
-  if (/Mobi|Android(?!.*Tablet)|iPhone/i.test(ua)) device = 'Móvil';
-  else if (/Tablet|iPad/i.test(ua)) device = 'Tablet';
+  if (/Tablet|iPad|Nexus 7|Nexus 9|SM-T\d/i.test(ua)) device = 'Tablet';
+  else if (/Mobile|Mobi|Android|iPhone|iPod|Windows Phone|BlackBerry|Opera Mini/i.test(ua)) device = 'Móvil';
 
   let os = 'Desconocido';
   if (/Windows NT 10/i.test(ua)) os = 'Windows 10/11';
@@ -93,32 +101,20 @@ function saveVisitRecord(record) {
 }
 
 export const notify = {
-  async visit({ page, ip, ua, referrer }) {
-    const geo = await geoLookup(ip);
+  async visit({ page, ip, ua, referrer, geoHint }) {
+    const geo = await geoLookup(ip, geoHint);
     const { device, os, browser } = parseUA(ua);
-
-    saveVisitRecord({
-      ts: Date.now(),
-      date: now(),
-      page: page || '/',
-      ip: ip || '',
-      country: geo.country,
-      countryCode: geo.countryCode,
-      region: geo.region,
-      city: geo.city,
-      isp: geo.isp,
-      device, os, browser,
-      referrer: referrer || '',
-    });
+    const rawUa = String(ua || '').slice(0, 180) || 'sin user-agent';
 
     await sendDiscord(
 `**📢 Nueva visita a NEXUMO**
 🕐 ${now()}
 📄 Página: ${page || '/'}
-🌍 País: ${geo.country}${geo.city ? ` (${geo.city}${geo.region ? ', ' + geo.region : ''})` : ''}
-🌐 IP: ${ip || 'desconocida'}${geo.isp ? ` — ${geo.isp}` : ''}
+🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
+🌐 IP: ${ip || 'desconocida'}${geo.src ? ` (geo: ${geo.src})` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
-🔗 Referrer: ${referrer || 'directo'}`
+🔗 Referrer: ${referrer || 'directo'}
+🧾 UA: ${rawUa}`
     );
   },
 
