@@ -1,0 +1,31 @@
+export const PRODUCT_FILES = {
+  1:  { name: 'Proveedor de Legos',                    files: ['lego-contacto.jpg'] },
+  2:  { name: 'Proveedor de Relojes',                  files: ['relojes-contacto.jpg.jpg'] },
+  3:  { name: 'Proveedor de Perfumes',                 files: ['perfumes-contacto.jpg'] },
+  4:  { name: 'Proveedor Tecnologia',                  files: ['tecnologia-contacto.jpg'] },
+  5:  { name: 'Proveedor de Ropa',                     files: ['ropa+zapas-contacto.jpg'] },
+  6:  { name: 'Proveedor de Zapatos',                  files: ['ropa+zapas-contacto.jpg'] },
+  7:  { name: 'Pack Ropa y Zapatos',                   files: ['ropa+zapas-contacto.jpg'] },
+  8:  { name: 'Proveedor Vaperes',                     files: ['vaperes-contactos.jpg'] },
+  9:  { name: 'Pack Accesorios y Ropa',                files: ['accesorios+ropa-contacto.jpg'] },
+  10: { name: 'Pulseras LV',                           files: ['pulserasLV-contacto.jpg'] },
+  11: { name: 'Lafufus',                               files: ['lafufus-contacto.jpg'] },
+  12: { name: 'Pack +99 Facturas y Tickets Editables', files: ['TICKET Y FACTURAS.zip'] },
+  13: { name: 'Guía Avanzada de Ventas y Neuroventa',  files: ['Guia_Avanzada_Ventas.pdf'] },
+  14: { name: 'Guía Maestra de Reventa y Arbitraje',   files: ['Guia_Maestra_Reventa.pdf'] },
+  15: { name: 'Manual Definitivo de Dropshipping y Ecommerce', files: ['Guia_Definitiva_Dropshipping.pdf'] },
+  16: { name: 'Shopify, Dropshipping & E-Commerce Maestro',    files: ['Manual_Maestro_Shopify_Dropshipping_2026.pdf'] },
+  17: { name: 'Pack Guías Completo', files: [
+    'Guia_Avanzada_Ventas.pdf',
+    'Guia_Maestra_Reventa.pdf',
+    'Guia_Definitiva_Dropshipping.pdf',
+    'Manual_Maestro_Shopify_Dropshipping_2026.pdf',
+    'Guion Carreras Legales.pdf',
+  ]},
+};
+
+export const PRICES = {
+  1: 8.95, 2: 9.95, 3: 7.95, 4: 9.95, 5: 7.95, 6: 8.95,
+  7: 9.95, 8: 8.95, 9: 9.95, 10: 4.95, 11: 5.95, 12: 4.95,
+  13: 3.95, 14: 3.95, 15: 3.95, 16: 3.95, 17: 9.95,
+};
