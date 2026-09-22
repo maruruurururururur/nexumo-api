@@ -101,18 +101,24 @@ function saveVisitRecord(record) {
 }
 
 export const notify = {
-  async visit({ page, ip, ua, referrer, geoHint }) {
+  async visit({ page, ip, ua, referrer, geoHint, vid, isNew, fp, bots, fph }) {
     const geo = await geoLookup(ip, geoHint);
     const { device, os, browser } = parseUA(ua);
     const rawUa = String(ua || '').slice(0, 180) || 'sin user-agent';
+    const f = fp || {};
+    const botFlags = (bots || []).join(', ');
+    const fpLine = [f.plat, f.scr, f.lang, f.tz].filter(Boolean).join(' · ') || '—';
 
     await sendDiscord(
-`**📢 Nueva visita a NEXUMO**
+`**📢 ${isNew ? 'Nuevo visitante' : 'Visita recurrente'} en NEXUMO**
 🕐 ${now()}
+🆔 Visitante: ${vid || 'desconocido'}${fph ? ` (huella ${fph})` : ''}${isNew ? ' · 🆕 primera vez' : ' · 🔁 ya conocido'}
+🤖 Bot: ${botFlags ? `SOSPECHOSO (${botFlags})` : 'no (parece humano)'}
 📄 Página: ${page || '/'}
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
 🌐 IP: ${ip || 'desconocida'}${geo.src ? ` (geo: ${geo.src})` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
+🖥️ Huella: ${fpLine}${f.cores ? ` · ${f.cores} núcleos` : ''}${f.touch ? ` · táctil x${f.touch}` : ''}
 🔗 Referrer: ${referrer || 'directo'}
 🧾 UA: ${rawUa}`
     );

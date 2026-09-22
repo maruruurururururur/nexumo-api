@@ -243,6 +243,11 @@ app.post('/api/track', (req, res) => {
     ip: req.headers['x-real-ip'] || clientIp(req),
     ua: req.headers['user-agent'] || '',
     referrer: req.headers['referer'] || req.body?.referrer || '',
+    vid: String(req.body?.vid || '').slice(0, 32),
+    isNew: req.body?.isNew === true,
+    fp: req.body?.fp || {},
+    bots: Array.isArray(req.body?.bots) ? req.body.bots.slice(0, 5) : [],
+    fph: String(req.body?.fph || '').slice(0, 16),
     geoHint: {
       country: req.headers['x-vercel-ip-country'],
       countryCode: req.headers['x-vercel-ip-country'],
