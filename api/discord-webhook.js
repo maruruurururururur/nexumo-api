@@ -35,6 +35,15 @@ function isPrivateIp(ip) {
     /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip);
 }
 
+function tzOffsetMinutes(tz) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const parts = Object.fromEntries(dtf.formatToParts(new Date()).map(p => [p.type, p.value]));
+    const asUTC = Date.UTC(parts.year, Number(parts.month) - 1, parts.day, parts.hour === '24' ? 0 : Number(parts.hour), parts.minute);
+    return Math.round((asUTC - Date.now()) / 60000);
+  } catch { return null; }
+}
+
 async function geoLookup(ip, hint = {}) {
   const fallback = { country: 'Desconocido', countryCode: '', region: '', city: '', isp: '', src: '' };
   if (hint.country) {
@@ -47,26 +56,57 @@ async function geoLookup(ip, hint = {}) {
   if (isPrivateIp(ip)) return { ...fallback, country: 'Local/Privada' };
 
   const cached = geoCache.get(ip);
-  if (cached && Date.now() - cached.ts < GEO_TTL) return cached.data;
+  if (cached && Date.now() - cached.ts < GEO_TTL) {
+    const info = { ...cached.data };
+    if (hint.country && !info.countryCode) { info.country = hint.country; info.countryCode = hint.countryCode || ''; }
+    return { ...info, ...vpnCheck(info, hint) };
+  }
 
   try {
-    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting,query`, { signal: AbortSignal.timeout(5000) });
     const data = await res.json();
-    if (data.error) throw new Error(data.reason || 'geo error');
+    if (data.status !== 'success') throw new Error(data.message || 'geo error');
     const info = {
-      country: data.country_name || 'Desconocido',
-      countryCode: data.country_code || '',
-      region: data.region || '',
-      city: data.city || '',
-      isp: data.org || '',
-      src: 'ipapi',
+      country: hint.country || data.country || 'Desconocido',
+      countryCode: hint.countryCode || data.countryCode || '',
+      region: hint.region || data.regionName || '',
+      city: hint.city || data.city || '',
+      zip: data.zip || '',
+      lat: data.lat, lon: data.lon,
+      tz: data.timezone || '',
+      isp: data.isp || '',
+      org: data.org || '',
+      asn: data.as || '',
+      mobile: !!data.mobile,
+      proxy: !!data.proxy,
+      hosting: !!data.hosting,
+      src: hint.country ? 'vercel-edge+ip-api' : 'ip-api',
     };
     geoCache.set(ip, { data: info, ts: Date.now() });
-    return info;
+    return { ...info, ...vpnCheck(info, hint) };
   } catch (e) {
-    console.error('[geo] error:', e.message);
+    if (hint.country) {
+      return {
+        country: hint.country, countryCode: hint.countryCode || '',
+        region: hint.region || '', city: hint.city || '', isp: '',
+        src: 'vercel-edge',
+      };
+    }
     return fallback;
   }
+}
+
+function vpnCheck(info, hint) {
+  const reasons = [];
+  if (info.proxy) reasons.push('proxy declarado');
+  if (info.hosting) reasons.push('IP de datacenter/hosting');
+  const btz = hint.browserTz || '';
+  if (btz && info.tz) {
+    const a = tzOffsetMinutes(btz);
+    const b = tzOffsetMinutes(info.tz);
+    if (a !== null && b !== null && Math.abs(a - b) > 60) reasons.push(`zona horaria no cuadra (navegador ${btz} vs IP ${info.tz})`);
+  }
+  return { vpn: reasons.length > 0, vpnReasons: reasons };
 }
 
 
@@ -126,7 +166,9 @@ export const notify = {
 🤖 SOSPECHOSO: ${botFlags}` : ''}
 📄 Página: ${page || '/'}
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
-🌐 IP: ${ip || 'desconocida'}${geo.src ? ` (geo: ${geo.src})` : ''}
+🌐 IP: ${ip || 'desconocida'}${geo.asn ? ` — ${geo.asn}` : ''}${geo.src ? ` (geo: ${geo.src})` : ''}${geo.mobile ? ' · 📶 IP móvil' : ''}
+🛡️ VPN/Proxy: ${geo.vpn ? `SÍ (${(geo.vpnReasons || []).join(' + ')})` : 'no'}${(geo.lat && geo.lon) ? `
+📍 Mapa: https://www.google.com/maps?q=${geo.lat},${geo.lon}` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
 🖥️ Huella: ${fpLine}${f.cores ? ` · ${f.cores} núcleos` : ''}${f.touch ? ` · táctil x${f.touch}` : ''}
 🔗 Referrer: ${referrer || 'directo'}
