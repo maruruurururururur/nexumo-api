@@ -70,6 +70,15 @@ async function geoLookup(ip, hint = {}) {
 }
 
 
+function aliasFor(vid, fph) {
+  const adj = ['Veloz','Sigiloso','Nocturno','Bravo','Astuto','Curioso','Feroz','Tranquilo','Audaz','Listo','Sereno','Inquieto','Noble','Picaro','Tenaz','Vivaz'];
+  const ani = ['Zorro','Lobo','Cuervo','Tiburon','Aguila','Tigre','Búho','Delfin','Pantera','Halcón','Oso','Lince','Toro','Dragón','Fénix','Jaguar'];
+  let h = 5381;
+  const s = String(vid || '') + '|' + String(fph || '');
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return `${ani[h % ani.length]} ${adj[(h >> 4) % adj.length]} #${(h & 0xffff).toString(16).padStart(4, '0').toUpperCase()}`;
+}
+
 function parseUA(ua = '') {
   let device = 'Escritorio';
   if (/Tablet|iPad|Nexus 7|Nexus 9|SM-T\d/i.test(ua)) device = 'Tablet';
@@ -112,8 +121,9 @@ export const notify = {
     await sendDiscord(
 `**📢 ${isNew ? 'Nuevo visitante' : 'Visita recurrente'} en NEXUMO**
 🕐 ${now()}
-🆔 Visitante: ${vid || 'desconocido'}${fph ? ` (huella ${fph})` : ''}${isNew ? ' · 🆕 primera vez' : ' · 🔁 ya conocido'}
-🤖 Bot: ${botFlags ? `SOSPECHOSO (${botFlags})` : 'no (parece humano)'}
+👤 Nombre: ${aliasFor(vid, fph)}${isNew ? ' · 🆕 primera vez' : ' · 🔁 ya conocido'}
+🆔 ID: ${vid || 'desconocido'}${fph ? ` (huella ${fph})` : ''}${botFlags ? `
+🤖 SOSPECHOSO: ${botFlags}` : ''}
 📄 Página: ${page || '/'}
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
 🌐 IP: ${ip || 'desconocida'}${geo.src ? ` (geo: ${geo.src})` : ''}
