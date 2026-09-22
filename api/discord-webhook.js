@@ -50,7 +50,7 @@ async function geoLookup(ip, hint = {}) {
   if (cached && Date.now() - cached.ts < GEO_TTL) return cached.data;
 
   try {
-    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`);
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: AbortSignal.timeout(5000) });
     const data = await res.json();
     if (data.error) throw new Error(data.reason || 'geo error');
     const info = {

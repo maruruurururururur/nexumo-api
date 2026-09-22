@@ -237,9 +237,11 @@ app.get('/api/download/:token', (req, res) => {
   res.download(abs, file.name);
 });
 
-app.post('/api/track', (req, res) => {
-  notify.visit({
-    page: req.body?.page || '/',
+app.post('/api/track', async (req, res) => {
+  try {
+    await Promise.race([
+      notify.visit({
+        page: req.body?.page || '/',
     ip: req.headers['x-real-ip'] || clientIp(req),
     ua: req.headers['user-agent'] || '',
     referrer: req.headers['referer'] || req.body?.referrer || '',
@@ -255,7 +257,10 @@ app.post('/api/track', (req, res) => {
       city: req.headers['x-vercel-ip-city']
         ? decodeURIComponent(req.headers['x-vercel-ip-city']) : '',
     },
-  }).catch(() => {});
+    }).catch(() => {}),
+      new Promise(r => setTimeout(r, 8000)),
+    ]);
+  } catch (e) {}
   res.json({ ok: true });
 });
 
