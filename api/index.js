@@ -299,17 +299,30 @@ function abuseCheck(req, res, kind) {
 
 function shortToken(t) { return String(t || '').slice(0, 8); }
 
+const publishedReviews = [];
+
 app.post('/api/review', (req, res) => {
   if (abuseCheck(req, res, 'reviews')) return;
   try {
     const { name = '', rating = 5, message = '' } = req.body || {};
     const r = Math.min(5, Math.max(1, parseInt(rating) || 5));
     if (!String(message).trim() || String(message).length > 500) return res.status(400).json({ error: 'Reseña no válida' });
-    notify.review({ name: String(name).slice(0, 60) || 'Anónimo', rating: r, message: String(message).slice(0, 500), ip: clientIp(req) }).catch(() => {});
-    res.json({ ok: true });
+    const cleanName = String(name).slice(0, 60) || 'Anónimo';
+    const cleanMsg = String(message).slice(0, 500);
+    const published = r >= 4;
+    if (published) {
+      publishedReviews.unshift({ name: cleanName, rating: r, message: cleanMsg, ts: Date.now() });
+      if (publishedReviews.length > 50) publishedReviews.length = 50;
+    }
+    notify.review({ name: cleanName, rating: r, message: cleanMsg, ip: clientIp(req), published }).catch(() => {});
+    res.json({ ok: true, published });
   } catch (e) {
     res.status(500).json({ error: 'No se pudo enviar' });
   }
+});
+
+app.get('/api/reviews', (_, res) => {
+  res.json({ reviews: publishedReviews.slice(0, 12) });
 });
 
 app.post('/api/contact', async (req, res) => {

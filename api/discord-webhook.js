@@ -202,10 +202,12 @@ ${lineas}
     );
   },
 
-  async review({ name, rating, message, ip }) {
+  async review({ name, rating, message, ip, published }) {
     const stars = '★'.repeat(Math.min(5, Math.max(1, Number(rating) || 5)));
     await sendDiscord(
-`**⭐ Nueva reseña en NEXUMO**
+`**⭐ Nueva reseña en NEXUMO${published ? ' (PUBLICADA en la web)' : ' (1-3★: solo moderación)'}`
+🕐 ${now()}
+👤 ${name || 'Anónimo'} · ${stars} (${rating}/5)
 🕐 ${now()}
 👤 ${name || 'Anónimo'} · ${stars} (${rating}/5)
 💬 ${message || ''}
