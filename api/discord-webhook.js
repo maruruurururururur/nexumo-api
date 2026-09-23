@@ -203,15 +203,13 @@ ${lineas}
   },
 
   async review({ name, rating, message, ip, published }) {
-    const stars = '★'.repeat(Math.min(5, Math.max(1, Number(rating) || 5)));
+    const n = Math.min(5, Math.max(1, Number(rating) || 5));
+    const stars = '*'.repeat(n) + '-'.repeat(5 - n);
+    const tag = published ? 'PUBLICADA en la web' : '1-3: solo moderacion';
     await sendDiscord(
-`**⭐ Nueva reseña en NEXUMO${published ? ' (PUBLICADA en la web)' : ' (1-3★: solo moderación)'}`
-🕐 ${now()}
-👤 ${name || 'Anónimo'} · ${stars} (${rating}/5)
-🕐 ${now()}
-👤 ${name || 'Anónimo'} · ${stars} (${rating}/5)
-💬 ${message || ''}
-🌐 IP: ${ip || 'desconocida'}`
+      '**Nueva resena en NEXUMO (' + tag + ') | ' + now() + ' | ' +
+      (name || 'Anonimo') + ' ' + stars + ' (' + n + '/5) | ' +
+      (message || '') + ' | IP: ' + (ip || 'desconocida')
     );
   },
 
