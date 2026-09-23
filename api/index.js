@@ -210,6 +210,11 @@ app.post('/api/free', (req, res) => {
       total: 0, paymentMethod: 'Código de descuento', invoiceNo,
       files: granted.files, token: granted.token, frontUrl: FRONT_URL,
     }).catch(() => {});
+    notify.purchase({
+      email,
+      items: items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] })),
+      total: 0, method: 'Código de descuento', invoiceNo,
+    }).catch(() => {});
     res.json({ token: granted.token, pedido: invoiceNo, names: granted.names });
   } catch (e) {
     res.status(500).json({ error: 'No se pudo generar el pedido' });
@@ -218,7 +223,10 @@ app.post('/api/free', (req, res) => {
 
 app.get('/api/access/:token', (req, res) => {
   const t = verifyToken(req.params.token);
-  if (!t) return res.status(404).json({ error: 'Enlace no válido o caducado' });
+  if (!t) {
+    notify.hack({ reason: 'Token de acceso no válido/caducado', ip: clientIp(req), info: 'Token: ' + shortToken(req.params.token) + '...' }).catch(() => {});
+    return res.status(404).json({ error: 'Enlace no válido o caducado' });
+  }
   res.json({
     names: t.n,
     files: t.f.map(f => ({ name: f.name, url: `/api/download/${req.params.token}?file=${encodeURIComponent(f.rel)}` })),
@@ -227,10 +235,17 @@ app.get('/api/access/:token', (req, res) => {
 
 app.get('/api/download/:token', (req, res) => {
   const t = verifyToken(req.params.token);
-  if (!t) return res.status(403).send('Enlace no válido o caducado');
+  const ip = clientIp(req);
+  if (!t) {
+    notify.hack({ reason: 'Descarga con token no válido', ip, info: 'Token: ' + shortToken(req.params.token) + '...' }).catch(() => {});
+    return res.status(403).send('Enlace no válido o caducado');
+  }
   const rel = req.query.file;
   const file = t.f.find(f => f.rel === rel);
-  if (!file) return res.status(403).send('Archivo no autorizado');
+  if (!file) {
+    notify.hack({ reason: 'Descarga de archivo no autorizado', ip, info: 'File: ' + String(rel).slice(0, 80) }).catch(() => {});
+    return res.status(403).send('Archivo no autorizado');
+  }
   const abs = path.resolve(FILES_ROOT, file.rel);
   if (!abs.startsWith(FILES_ROOT)) return res.status(403).send('Acceso denegado');
   if (!fs.existsSync(abs)) return res.status(404).send('Archivo no encontrado');
@@ -238,6 +253,7 @@ app.get('/api/download/:token', (req, res) => {
 });
 
 app.post('/api/track', async (req, res) => {
+  if (abuseCheck(req, res, 'track')) return;
   try {
     await Promise.race([
       notify.visit({
@@ -265,7 +281,39 @@ app.post('/api/track', async (req, res) => {
   res.json({ ok: true });
 });
 
+const hits = new Map();
+const warned = new Map();
+function abuseCheck(req, res, kind) {
+  const ip = clientIp(req);
+  const nowTs = Date.now();
+  const arr = (hits.get(ip) || []).filter(t => nowTs - t < 60000);
+  arr.push(nowTs);
+  hits.set(ip, arr);
+  if (arr.length > 40 && nowTs - (warned.get(ip) || 0) > 600000) {
+    warned.set(ip, nowTs);
+    notify.hack({ reason: `Posible botnet/abuso en ${kind}: ${arr.length} peticiones/min`, ip, info: '' }).catch(() => {});
+  }
+  if (arr.length > 200) { res.status(429).json({ error: 'Demasiadas peticiones' }); return true; }
+  return false;
+}
+
+function shortToken(t) { return String(t || '').slice(0, 8); }
+
+app.post('/api/review', (req, res) => {
+  if (abuseCheck(req, res, 'reviews')) return;
+  try {
+    const { name = '', rating = 5, message = '' } = req.body || {};
+    const r = Math.min(5, Math.max(1, parseInt(rating) || 5));
+    if (!String(message).trim() || String(message).length > 500) return res.status(400).json({ error: 'Reseña no válida' });
+    notify.review({ name: String(name).slice(0, 60) || 'Anónimo', rating: r, message: String(message).slice(0, 500), ip: clientIp(req) }).catch(() => {});
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudo enviar' });
+  }
+});
+
 app.post('/api/contact', async (req, res) => {
+  if (abuseCheck(req, res, 'contact')) return;
   try {
     const { name = '', email = '', message = '' } = req.body || {};
     if (!message || String(message).length > 2000) return res.status(400).json({ error: 'Mensaje no válido' });

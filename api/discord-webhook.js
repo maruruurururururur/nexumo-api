@@ -202,8 +202,18 @@ ${lineas}
     );
   },
 
-  async contact({ name, email, message }) {
+  async review({ name, rating, message, ip }) {
+    const stars = '★'.repeat(Math.min(5, Math.max(1, Number(rating) || 5)));
     await sendDiscord(
+`**⭐ Nueva reseña en NEXUMO**
+🕐 ${now()}
+👤 ${name || 'Anónimo'} · ${stars} (${rating}/5)
+💬 ${message || ''}
+🌐 IP: ${ip || 'desconocida'}`
+    );
+  },
+
+  async contact({ name, email, message }) {    await sendDiscord(
 `**📨 Mensaje de soporte (web)**
 🕐 ${now()}
 👤 Nombre: ${name || '—'}
