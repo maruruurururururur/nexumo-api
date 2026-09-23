@@ -9,14 +9,22 @@ if (!WEBHOOK) {
   console.warn('[discord] DISCORD_WEBHOOK_URL no está definida en .env — las notificaciones a Discord no se enviarán.');
 }
 
-export async function sendDiscord(text) {
+export async function sendDiscord(text, file) {
   if (!WEBHOOK) return;
   try {
-    const res = await fetch(WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: text }),
-    });
+    let res;
+    if (file && file.buffer) {
+      const form = new FormData();
+      form.append('payload_json', JSON.stringify({ content: text }));
+      form.append('files[0]', new Blob([file.buffer], { type: file.contentType || 'application/pdf' }), file.filename || 'factura.pdf');
+      res = await fetch(WEBHOOK, { method: 'POST', body: form });
+    } else {
+      res = await fetch(WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: text }),
+      });
+    }
     if (!res.ok) console.error('[discord] status', res.status, await res.text().catch(() => ''));
   } catch (e) {
     console.error('[discord] error', e.message);
@@ -176,7 +184,7 @@ export const notify = {
     );
   },
 
-  async purchase({ email, items, total, method, invoiceNo }) {
+  async purchase({ email, items, total, method, invoiceNo, pdf }) {
     const lineas = (items || []).map(i =>
       `• ${i.name} x${i.qty} — ${fmtEUR((Number(i.price) || 0) * (Number(i.qty) || 1))}`
     ).join('\n') || '—';
@@ -188,7 +196,9 @@ export const notify = {
 💳 Método: ${method || '—'}
 📦 Productos:
 ${lineas}
-**TOTAL: ${fmtEUR(total || 0)}**`
+**TOTAL: ${fmtEUR(total || 0)}**
+🧾 Factura en PDF adjunta 👇`,
+      pdf ? { buffer: pdf, filename: `factura-${invoiceNo || 'pedido'}.pdf`, contentType: 'application/pdf' } : null
     );
   },
 

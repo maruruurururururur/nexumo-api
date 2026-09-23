@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { PRODUCT_FILES, PRICES } from './products.js';
 import { DISCOUNTS } from './discounts.js';
 import { sendOrderEmail, sendContactEmail } from './email.js';
+import { generateInvoicePDF } from './invoice-pdf.js';
 import { notify } from './discord-webhook.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -173,16 +174,19 @@ app.post('/api/paypal/capture-order', async (req, res) => {
     const payerEmail = captured.payer?.email_address || email;
     const granted = grantToken(items, payerEmail);
     if (!granted) return res.status(400).json({ error: 'No se pudo identificar el pedido' });
+    const billItems = items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] }));
+    const invDate = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    const pdf = await generateInvoicePDF({ invoiceNo: captured.id, date: invDate, billTo: payerEmail, items: billItems, total: paid, paymentMethod: 'PayPal' }).catch(() => null);
     sendOrderEmail({
       to: payerEmail,
-      items: items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] })),
+      items: billItems,
       total: paid, paymentMethod: 'PayPal', invoiceNo: captured.id,
       files: granted.files, token: granted.token, frontUrl: FRONT_URL,
     }).catch(() => {});
     notify.purchase({
       email: payerEmail,
-      items: items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] })),
-      total: paid, method: 'PayPal', invoiceNo: captured.id,
+      items: billItems,
+      total: paid, method: 'PayPal', invoiceNo: captured.id, pdf,
     }).catch(() => {});
     res.json({ token: granted.token, pedido: captured.id, names: granted.names });
   } catch (e) {
@@ -204,16 +208,18 @@ app.post('/api/free', (req, res) => {
     const granted = grantToken(items, email);
     if (!granted) return res.status(400).json({ error: 'No se pudo identificar el pedido' });
     const invoiceNo = 'FREE-' + Date.now();
+    const freeItems = items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] }));
+    const freePdf = await generateInvoicePDF({ invoiceNo, date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }), billTo: email, items: freeItems, total: 0, paymentMethod: 'Código de descuento' }).catch(() => null);
     sendOrderEmail({
       to: email,
-      items: items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] })),
+      items: freeItems,
       total: 0, paymentMethod: 'Código de descuento', invoiceNo,
       files: granted.files, token: granted.token, frontUrl: FRONT_URL,
     }).catch(() => {});
     notify.purchase({
       email,
-      items: items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] })),
-      total: 0, method: 'Código de descuento', invoiceNo,
+      items: freeItems,
+      total: 0, method: 'Código de descuento', invoiceNo, pdf: freePdf,
     }).catch(() => {});
     res.json({ token: granted.token, pedido: invoiceNo, names: granted.names });
   } catch (e) {
