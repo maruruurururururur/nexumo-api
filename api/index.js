@@ -194,7 +194,7 @@ app.post('/api/paypal/capture-order', async (req, res) => {
   }
 });
 
-app.post('/api/free', (req, res) => {
+app.post('/api/free', async (req, res) => {
   try {
     const items = cleanItems(req.body?.items);
     const { email = '', code = '' } = req.body || {};
