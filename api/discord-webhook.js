@@ -204,11 +204,11 @@ ${lineas}
 
   async review({ name, rating, message, ip, published }) {
     const n = Math.min(5, Math.max(1, Number(rating) || 5));
-    const stars = '*'.repeat(n) + '-'.repeat(5 - n);
-    const tag = published ? 'PUBLICADA en la web' : '1-3: solo moderacion';
+    const stars = '★★★★★'.slice(0, n);
+    const tag = published ? 'PUBLICADA en la web' : '1-3 estrellas: solo moderación';
     await sendDiscord(
-      '**Nueva resena en NEXUMO (' + tag + ') | ' + now() + ' | ' +
-      (name || 'Anonimo') + ' ' + stars + ' (' + n + '/5) | ' +
+      '⭐ Nueva reseña en NEXUMO (' + tag + ') | ' + now() + ' | ' +
+      (name || 'Anónimo') + ' ' + stars + ' (' + n + '/5) | ' +
       (message || '') + ' | IP: ' + (ip || 'desconocida')
     );
   },
