@@ -159,6 +159,7 @@ app.post('/api/paypal/capture-order', async (req, res) => {
   try {
     const { orderId, email = '', sig = '' } = req.body || {};
     if (!orderId) return res.status(400).json({ error: 'Falta orderId' });
+    if (isBlocked(email)) return blockedRes(req, res, 'la compra');
     const items = cleanItems(req.body?.items);
     if (!items.length) return res.status(400).json({ error: 'Carrito vacío' });
     const total = serverTotal(items);
@@ -172,6 +173,10 @@ app.post('/api/paypal/capture-order', async (req, res) => {
     const paid = parseFloat(unit?.amount?.value || unit?.payments?.captures?.[0]?.amount?.value || '0');
     if (Math.abs(paid - total) > 0.01) return res.status(400).json({ error: 'El importe no coincide' });
     const payerEmail = captured.payer?.email_address || email;
+    if (isBlocked(payerEmail)) {
+      req.body.email = payerEmail;
+      return blockedRes(req, res, 'la compra (email PayPal)');
+    }
     const granted = grantToken(items, payerEmail);
     if (!granted) return res.status(400).json({ error: 'No se pudo identificar el pedido' });
     const billItems = items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] }));
@@ -199,6 +204,7 @@ app.post('/api/free', async (req, res) => {
     const items = cleanItems(req.body?.items);
     const { email = '', code = '' } = req.body || {};
     if (!items.length) return res.status(400).json({ error: 'Carrito vacío' });
+    if (isBlocked(email)) return blockedRes(req, res, 'el pedido gratis');
     const discount = DISCOUNTS[String(code || '').trim().toUpperCase()];
     if (!discount) return res.status(400).json({ error: 'Código no válido' });
     if (discount.products && !items.every(i => discount.products.includes(i.id))) {
@@ -298,6 +304,16 @@ app.post('/api/track', async (req, res) => {
 const hits = new Map();
 const warned = new Map();
 const redeemed = new Map();
+
+const BLOCKED_EMAILS = new Set(['oskiw.14@gmail.com']);
+function isBlocked(email) {
+  return BLOCKED_EMAILS.has(String(email || '').trim().toLowerCase());
+}
+function blockedRes(req, res, where) {
+  const email = String(req.body?.email || req.body?.name || '').slice(0, 80);
+  notify.hack({ reason: `Email bloqueado de por vida intentó usar ${where}`, ip: clientIp(req), info: 'Email: ' + (req.body?.email || '') }).catch(() => {});
+  return res.status(403).json({ error: 'No podemos procesar tu solicitud' });
+}
 function abuseCheck(req, res, kind) {
   const ip = clientIp(req);
   const nowTs = Date.now();
@@ -318,6 +334,7 @@ const publishedReviews = [];
 
 app.post('/api/review', (req, res) => {
   if (abuseCheck(req, res, 'reviews')) return;
+  if (isBlocked(req.body?.name) || String(req.body?.message || '').toLowerCase().includes('oskiw.14@gmail.com')) return blockedRes(req, res, 'las reseñas');
   try {
     const { name = '', rating = 5, message = '' } = req.body || {};
     const r = Math.min(5, Math.max(1, parseInt(rating) || 5));
@@ -342,6 +359,7 @@ app.get('/api/reviews', (_, res) => {
 
 app.post('/api/contact', async (req, res) => {
   if (abuseCheck(req, res, 'contact')) return;
+  if (isBlocked(req.body?.email)) return blockedRes(req, res, 'el contacto');
   try {
     const { name = '', email = '', message = '' } = req.body || {};
     if (!message || String(message).length > 2000) return res.status(400).json({ error: 'Mensaje no válido' });
