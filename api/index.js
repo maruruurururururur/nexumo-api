@@ -201,6 +201,13 @@ app.post('/api/free', async (req, res) => {
     if (!items.length) return res.status(400).json({ error: 'Carrito vacío' });
     const discount = DISCOUNTS[String(code || '').trim().toUpperCase()];
     if (!discount) return res.status(400).json({ error: 'Código no válido' });
+    if (discount.products && !items.every(i => discount.products.includes(i.id))) {
+      return res.status(400).json({ error: 'Ese código solo vale para productos concretos' });
+    }
+    if (discount.maxUses) {
+      const used = redeemed.get(String(code).trim().toUpperCase()) || 0;
+      if (used >= discount.maxUses) return res.status(400).json({ error: 'Ese código ya fue usado' });
+    }
     const total = serverTotal(items);
     if (total * (1 - (discount.percent || 0) / 100) > 0.01) {
       return res.status(400).json({ error: 'Ese código solo cubre parte del importe' });
@@ -208,6 +215,7 @@ app.post('/api/free', async (req, res) => {
     const granted = grantToken(items, email);
     if (!granted) return res.status(400).json({ error: 'No se pudo identificar el pedido' });
     const invoiceNo = 'FREE-' + Date.now();
+    if (discount.maxUses) redeemed.set(String(code).trim().toUpperCase(), (redeemed.get(String(code).trim().toUpperCase()) || 0) + 1);
     const freeItems = items.map(i => ({ name: PRODUCT_FILES[i.id].name, qty: i.qty, price: PRICES[i.id] }));
     const freePdf = await generateInvoicePDF({ invoiceNo, date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }), billTo: email, items: freeItems, total: 0, paymentMethod: 'Código de descuento' }).catch(() => null);
     sendOrderEmail({
@@ -289,6 +297,7 @@ app.post('/api/track', async (req, res) => {
 
 const hits = new Map();
 const warned = new Map();
+const redeemed = new Map();
 function abuseCheck(req, res, kind) {
   const ip = clientIp(req);
   const nowTs = Date.now();
