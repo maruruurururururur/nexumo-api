@@ -3,8 +3,8 @@ NEXUMO - Proveedor Tarjetas NFC
 
 Tu proveedor: https://nfcpilot.com/#shop
 
-Que es: tarjetas NFC para resenas de Google (el cliente acerca el
-movil y deja su resena). Ideales para vender a bares, peluquerias,
+Que es: tarjetas NFC para reseñas de Google (el cliente acerca el
+móvil y deja su reseña). Ideales para vender a bares, peluquerias,
 talleres y negocios locales.
 
 Como usarlo:
