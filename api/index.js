@@ -17,6 +17,12 @@ const FILES_ROOT = path.join(__dirname, '..', 'files');
 const app = express();
 app.use(cors({ origin: (process.env.ALLOWED_ORIGIN || 'https://www.nexumo.store').split(',') }));
 app.use(express.json());
+app.use((_, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Frame-Options', 'DENY');
+  next();
+});
 
 const FRONT_URL = process.env.FRONT_URL || 'https://www.nexumo.store';
 const PAYPAL_MODE = (process.env.PAYPAL_MODE || 'live').toLowerCase();
@@ -242,6 +248,7 @@ app.post('/api/free', async (req, res) => {
 });
 
 app.get('/api/access/:token', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const t = verifyToken(req.params.token);
   if (!t) {
     notify.hack({ reason: 'Token de acceso no válido/caducado', ip: clientIp(req), info: 'Token: ' + shortToken(req.params.token) + '...' }).catch(() => {});
@@ -254,6 +261,7 @@ app.get('/api/access/:token', (req, res) => {
 });
 
 app.get('/api/download/:token', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const t = verifyToken(req.params.token);
   const ip = clientIp(req);
   if (!t) {
