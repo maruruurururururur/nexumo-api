@@ -15,17 +15,17 @@ export const PRODUCT_FILES = {
   14: { name: 'Guía Maestra de Reventa y Arbitraje',   files: ['Guia_Maestra_Reventa.pdf'] },
   15: { name: 'Manual Definitivo de Dropshipping y Ecommerce', files: ['Guia_Definitiva_Dropshipping.pdf'] },
   16: { name: 'Shopify, Dropshipping & E-Commerce Maestro',    files: ['Manual_Maestro_Shopify_Dropshipping_2026.pdf'] },
-  17: { name: 'Pack Guías Completo', files: [
-    'Guia_Avanzada_Ventas.pdf',
+  17: { name: 'Pack Guías Completo', files: [    'Guia_Avanzada_Ventas.pdf',
     'Guia_Maestra_Reventa.pdf',
     'Guia_Definitiva_Dropshipping.pdf',
     'Manual_Maestro_Shopify_Dropshipping_2026.pdf',
     'Guion Carreras Legales.pdf',
   ]},
+  18: { name: 'Tarjetas NFC', files: ['tarjetas-nfc-proveedor.txt'] },
 };
 
 export const PRICES = {
   1: 8.95, 2: 9.95, 3: 7.95, 4: 9.95, 5: 7.95, 6: 8.95,
   7: 9.95, 8: 8.95, 9: 9.95, 10: 4.95, 11: 5.95, 12: 4.95,
-  13: 3.95, 14: 3.95, 15: 3.95, 16: 3.95, 17: 9.95,
+  13: 3.95, 14: 3.95, 15: 3.95, 16: 3.95, 17: 9.95, 18: 1.99,
 };

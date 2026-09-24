@@ -1,0 +1,16 @@
+NEXUMO - Proveedor Tarjetas NFC
+=================================
+
+Tu proveedor: https://nfcpilot.com/#shop
+
+Que es: tarjetas NFC para resenas de Google (el cliente acerca el
+movil y deja su resena). Ideales para vender a bares, peluquerias,
+talleres y negocios locales.
+
+Como usarlo:
+1. Entra en https://nfcpilot.com/#shop
+2. Elige modelo y cantidad (precios de proveedor).
+3. Configura cada tarjeta con el enlace de resenas de tu cliente.
+4. Revende con tu margen.
+
+Soporte NEXUMO: Discord maruuxz_ / astrihub@gmail.com
