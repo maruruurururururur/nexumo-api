@@ -340,6 +340,7 @@ function abuseCheck(req, res, kind) {
 function shortToken(t) { return String(t || '').slice(0, 8); }
 
 const publishedReviews = [];
+const AUTO_PUBLISH = false;
 
 app.post('/api/review', (req, res) => {
   if (abuseCheck(req, res, 'reviews')) return;
@@ -350,8 +351,8 @@ app.post('/api/review', (req, res) => {
     if (!String(message).trim() || String(message).length > 500) return res.status(400).json({ error: 'Reseña no válida' });
     const cleanName = String(name).slice(0, 60) || 'Anónimo';
     const cleanMsg = String(message).slice(0, 500);
-    const published = r >= 4;
-    if (published) {
+    const published = false;
+    if (AUTO_PUBLISH && r >= 4) {
       publishedReviews.unshift({ name: cleanName, rating: r, message: cleanMsg, ts: Date.now() });
       if (publishedReviews.length > 50) publishedReviews.length = 50;
     }
