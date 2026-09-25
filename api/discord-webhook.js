@@ -43,6 +43,21 @@ function isPrivateIp(ip) {
     /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip);
 }
 
+async function reverseStreet(lat, lon) {
+  try {
+    const key = process.env.GEOCODE_KEY || '';
+    if (!key || lat == null || lon == null) return null;
+    const res = await fetch(`https://geocode.maps.co/reverse?lat=${lat}&lon=${lon}&api_key=${key}`, { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    const a = data.address || {};
+    const street = [a.road, a.house_number].filter(Boolean).join(' ');
+    const zone = [street, a.suburb || a.neighbourhood, a.postcode].filter(Boolean).join(', ');
+    if (!zone && !data.display_name) return null;
+    return { zone: zone || '', label: data.display_name ? String(data.display_name).slice(0, 160) : '' };
+  } catch {
+    return null;
+  }
+}
 function tzOffsetMinutes(tz) {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -90,6 +105,8 @@ async function geoLookup(ip, hint = {}) {
       hosting: !!data.hosting,
       src: hint.country ? 'vercel-edge+ip-api' : 'ip-api',
     };
+    const street = await reverseStreet(data.lat, data.lon);
+    if (street) { info.street = street.zone; info.addr = street.label; info.src += '+geocode'; }
     geoCache.set(ip, { data: info, ts: Date.now() });
     return { ...info, ...vpnCheck(info, hint) };
   } catch (e) {
@@ -176,7 +193,8 @@ export const notify = {
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
 🌐 IP: ${ip || 'desconocida'}${geo.asn ? ` — ${geo.asn}` : ''}${geo.src ? ` (geo: ${geo.src})` : ''}${geo.mobile ? ' · 📶 IP móvil' : ''}
 🛡️ VPN/Proxy: ${geo.vpn ? `SÍ (${(geo.vpnReasons || []).join(' + ')})` : 'no'}${(geo.lat && geo.lon) ? `
-📍 Mapa: https://www.google.com/maps?q=${geo.lat},${geo.lon}` : ''}
+📍 Mapa: https://www.google.com/maps?q=${geo.lat},${geo.lon}` : ''}${geo.street ? `
+🏠 Zona: ${geo.street}` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
 🖥️ Huella: ${fpLine}${f.cores ? ` · ${f.cores} núcleos` : ''}${f.touch ? ` · táctil x${f.touch}` : ''}
 🔗 Referrer: ${referrer || 'directo'}
