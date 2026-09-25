@@ -67,11 +67,17 @@ function tzOffsetMinutes(tz) {
   } catch { return null; }
 }
 
+const COUNTRY_ES = { ES: 'España', FR: 'Francia', GB: 'Reino Unido', US: 'Estados Unidos', DE: 'Alemania', IT: 'Italia', PT: 'Portugal', NL: 'Países Bajos', BE: 'Bélgica', IE: 'Irlanda', MX: 'México', AR: 'Argentina', CO: 'Colombia', CL: 'Chile', PE: 'Perú', VE: 'Venezuela', UY: 'Uruguay', BR: 'Brasil', MA: 'Marruecos', RO: 'Rumanía', PL: 'Polonia', UA: 'Ucrania', CN: 'China', IN: 'India', JP: 'Japón', CA: 'Canadá', CH: 'Suiza', AT: 'Austria', SE: 'Suecia', NO: 'Noruega', DK: 'Dinamarca', FI: 'Finlandia', GR: 'Grecia' };
+function countryName(code, fallback) {
+  if (COUNTRY_ES[code]) return COUNTRY_ES[code];
+  return fallback || code || 'Desconocido';
+}
+
 async function geoLookup(ip, hint = {}) {
   const fallback = { country: 'Desconocido', countryCode: '', region: '', city: '', isp: '', src: '' };
   if (hint.country) {
     return {
-      country: hint.country, countryCode: hint.countryCode || '',
+      country: countryName(hint.countryCode || hint.country, hint.country), countryCode: hint.countryCode || '',
       region: hint.region || '', city: hint.city || '', isp: '',
       src: 'vercel-edge',
     };
@@ -141,7 +147,7 @@ function aliasFor(vid, fph) {
   let h = 5381;
   const s = String(vid || '') + '|' + String(fph || '');
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
-  return `${ani[h % ani.length]} ${adj[(h >> 4) % adj.length]} #${(h & 0xffff).toString(16).padStart(4, '0').toUpperCase()}`;
+  return `${ani[h % ani.length]} ${adj[(h >>> 4) % adj.length]} #${(h & 0xffff).toString(16).padStart(4, '0').toUpperCase()}`;
 }
 
 function parseUA(ua = '') {
