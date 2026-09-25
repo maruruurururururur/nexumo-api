@@ -182,6 +182,9 @@ export const notify = {
     const f = fp || {};
     const botFlags = (bots || []).join(', ');
     const fpLine = [f.plat, f.scr, f.lang, f.tz].filter(Boolean).join(' · ') || '—';
+    const mapsUrl = (geo.lat && geo.lon)
+      ? `https://www.google.com/maps/@?api=1&map_action=map&center=${geo.lat},${geo.lon}&zoom=16&basemap=satellite`
+      : ((geo.city || geo.region || geo.countryCode) ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([geo.city, geo.region, geo.countryCode].filter(Boolean).join(', '))}` : '');
 
     await sendDiscord(
 `**📢 ${isNew ? 'Nuevo visitante' : 'Visita recurrente'} en NEXUMO**
@@ -193,7 +196,7 @@ export const notify = {
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
 🌐 IP: ${ip || 'desconocida'}${geo.asn ? ` — ${geo.asn}` : ''}${geo.src ? ` (geo: ${geo.src})` : ''}${geo.mobile ? ' · 📶 IP móvil' : ''}
 🛡️ VPN/Proxy: ${geo.vpn ? `SÍ (${(geo.vpnReasons || []).join(' + ')})` : 'no'}${(geo.lat && geo.lon) ? `
-📍 Mapa: https://www.google.com/maps?q=${geo.lat},${geo.lon}` : ''}${geo.street ? `
+📍Maps Ubi: ${mapsUrl || 'sin coordenadas'}` : ''}${geo.street ? `
 🏠 Zona: ${geo.street}` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
 🖥️ Huella: ${fpLine}${f.cores ? ` · ${f.cores} núcleos` : ''}${f.touch ? ` · táctil x${f.touch}` : ''}
