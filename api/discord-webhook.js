@@ -75,19 +75,17 @@ function countryName(code, fallback) {
 
 async function geoLookup(ip, hint = {}) {
   const fallback = { country: 'Desconocido', countryCode: '', region: '', city: '', isp: '', src: '' };
-  if (hint.country) {
-    return {
-      country: countryName(hint.countryCode || hint.country, hint.country), countryCode: hint.countryCode || '',
-      region: hint.region || '', city: hint.city || '', isp: '',
-      src: 'vercel-edge',
-    };
-  }
+  const hintOnly = () => ({
+    country: countryName(hint.countryCode || hint.country, hint.country), countryCode: hint.countryCode || '',
+    region: hint.region || '', city: hint.city || '', isp: '',
+    src: 'vercel-edge',
+  });
   if (isPrivateIp(ip)) return { ...fallback, country: 'Local/Privada' };
 
   const cached = geoCache.get(ip);
   if (cached && Date.now() - cached.ts < GEO_TTL) {
     const info = { ...cached.data };
-    if (hint.country && !info.countryCode) { info.country = hint.country; info.countryCode = hint.countryCode || ''; }
+    if (hint.country) { info.country = countryName(hint.countryCode || hint.country, info.country); info.countryCode = hint.countryCode || info.countryCode; }
     return { ...info, ...vpnCheck(info, hint) };
   }
 
@@ -96,7 +94,7 @@ async function geoLookup(ip, hint = {}) {
     const data = await res.json();
     if (data.status !== 'success') throw new Error(data.message || 'geo error');
     const info = {
-      country: hint.country || data.country || 'Desconocido',
+      country: hint.country ? countryName(hint.countryCode || hint.country, data.country) : (data.country || 'Desconocido'),
       countryCode: hint.countryCode || data.countryCode || '',
       region: hint.region || data.regionName || '',
       city: hint.city || data.city || '',
@@ -116,13 +114,7 @@ async function geoLookup(ip, hint = {}) {
     geoCache.set(ip, { data: info, ts: Date.now() });
     return { ...info, ...vpnCheck(info, hint) };
   } catch (e) {
-    if (hint.country) {
-      return {
-        country: hint.country, countryCode: hint.countryCode || '',
-        region: hint.region || '', city: hint.city || '', isp: '',
-        src: 'vercel-edge',
-      };
-    }
+    if (hint.country) return hintOnly();
     return fallback;
   }
 }
@@ -201,8 +193,8 @@ export const notify = {
 📄 Página: ${page || '/'}
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
 🌐 IP: ${ip || 'desconocida'}${geo.asn ? ` — ${geo.asn}` : ''}${geo.src ? ` (geo: ${geo.src})` : ''}${geo.mobile ? ' · 📶 IP móvil' : ''}
-🛡️ VPN/Proxy: ${geo.vpn ? `SÍ (${(geo.vpnReasons || []).join(' + ')})` : 'no'}${(geo.lat && geo.lon) ? `
-📍Maps Ubi: ${mapsUrl || 'sin coordenadas'}` : ''}${geo.street ? `
+🛡️ VPN/Proxy: ${geo.vpn ? `SÍ (${(geo.vpnReasons || []).join(' + ')})` : 'no'}${mapsUrl ? `
+📍Maps Ubi: ${mapsUrl}` : ''}${geo.street ? `
 🏠 Zona: ${geo.street}` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
 🖥️ Huella: ${fpLine}${f.cores ? ` · ${f.cores} núcleos` : ''}${f.touch ? ` · táctil x${f.touch}` : ''}
