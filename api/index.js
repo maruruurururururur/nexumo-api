@@ -296,6 +296,7 @@ app.post('/api/track', async (req, res) => {
     fph: String(req.body?.fph || '').slice(0, 16),
     geoHint: {
       browserTz: (req.body?.fp && req.body.fp.tz) || '',
+      gps: req.body?.geo || null,
       country: req.headers['x-vercel-ip-country'],
       countryCode: req.headers['x-vercel-ip-country'],
       region: req.headers['x-vercel-ip-country-region'],

