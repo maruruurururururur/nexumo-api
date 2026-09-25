@@ -313,6 +313,7 @@ app.post('/api/track', async (req, res) => {
 const hits = new Map();
 const warned = new Map();
 const redeemed = new Map();
+const supportHits = new Map();
 
 const BLOCKED_EMAILS = new Set(['oskiw.14@gmail.com']);
 function isBlocked(email) {
@@ -372,6 +373,12 @@ app.post('/api/contact', async (req, res) => {
   if (isBlocked(req.body?.email)) return blockedRes(req, res, 'el contacto');
   try {
     const { name = '', email = '', message = '' } = req.body || {};
+    const who = String(email || '').trim().toLowerCase() || ('ip:' + clientIp(req));
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const prev = (supportHits.get(who) || []).filter(t => t > dayAgo);
+    if (prev.length >= 2) return res.status(429).json({ error: 'Solo puedes enviar 2 mensajes de soporte al día' });
+    prev.push(Date.now());
+    supportHits.set(who, prev);
     if (!message || String(message).length > 2000) return res.status(400).json({ error: 'Mensaje no válido' });
     if (email && !validEmail(email)) return res.status(400).json({ error: 'Email no válido' });
     notify.contact({ name: String(name).slice(0, 100), email, message }).catch(() => {});
